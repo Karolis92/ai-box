@@ -9,6 +9,7 @@ const DEFAULT_NAME = "ai-box";
 const TEMPLATE_PATH = path.join(__dirname, "lima-copilot.yaml");
 const WORKSPACE_MOUNT_POINT = "/home/{{.User}}.guest/workspace";
 const COPILOT_MOUNT_POINT = "/home/{{.User}}.guest/.copilot";
+const CLAUDE_MOUNT_POINT = "/home/{{.User}}.guest/.claude";
 
 function usage() {
   process.stdout.write(`Usage: node ai-box.js [name]
@@ -69,6 +70,14 @@ function ensureCopilotStatePath(name) {
   fs.mkdirSync(copilotStatePath(name), { recursive: true });
 }
 
+function claudeStatePath(name) {
+  return path.join(os.homedir(), ".ai-box", name, ".claude");
+}
+
+function ensureClaudeStatePath(name) {
+  fs.mkdirSync(claudeStatePath(name), { recursive: true });
+}
+
 function buildMountsExpression(name) {
   return `.mounts = ${JSON.stringify([
     {
@@ -81,11 +90,17 @@ function buildMountsExpression(name) {
       mountPoint: COPILOT_MOUNT_POINT,
       writable: true,
     },
+    {
+      location: claudeStatePath(name),
+      mountPoint: CLAUDE_MOUNT_POINT,
+      writable: true,
+    },
   ])}`;
 }
 
 function createVm(name) {
   ensureCopilotStatePath(name);
+  ensureClaudeStatePath(name);
 
   run(
     "limactl",
@@ -137,9 +152,7 @@ function main() {
   }
 
   process.stdout.write(`[ai-box] Workspace: ${WORKSPACE_MOUNT_POINT}\n`);
-  process.stdout.write(
-    `[ai-box] Shell: limactl shell --workdir ${WORKSPACE_MOUNT_POINT} ${name}\n`,
-  );
+  process.stdout.write(`[ai-box] Shell: limactl shell ${name}\n`);
 }
 
 main();

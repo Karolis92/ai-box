@@ -1,14 +1,15 @@
 # AI Box (Lima Sandbox)
 
-Spin up sandbox Lima VMs for AI-assisted app work, with your current directory mounted at `/workspace`, Node.js + Copilot CLI installed, and shared Copilot state.
+Spin up sandbox Lima VMs for AI-assisted app work, with your current directory mounted at `/workspace`, Node.js + Copilot CLI + Claude Code + Docker installed, and shared Copilot state.
 
 ## What this gives you
 
 - Ubuntu-based VM per sandbox instance
 - Your current directory mounted writable at `/workspace`
 - Per-VM Copilot state mounted from the host
+- Per-VM Claude Code state mounted from the host
 - No implicit host home-directory mount inside the VM
-- `node`, `npm`, and GitHub Copilot CLI installed in the VM
+- `node`, `npm`, GitHub Copilot CLI, Claude Code, and Docker Engine installed in the VM
 - Host port forwarding for guest ports `1024-65535`
 
 ## Prerequisites
@@ -32,10 +33,11 @@ node ./ai-box.js
 
 ## Start script
 
-`node ./ai-box.js [name]` creates the VM if it does not exist, starts it if needed, and gives the VM exactly two mounts:
+`node ./ai-box.js [name]` creates the VM if it does not exist, starts it if needed, and gives the VM exactly three mounts:
 
 - your current host directory at `/workspace`
 - the per-instance Copilot state directory at `/home/<vm-user>.guest/.copilot`
+- the per-instance Claude Code state directory at `/home/<vm-user>.guest/.claude`
 
 The VM template disables Lima's bundled containerd setup and uses Ubuntu so the packaged GitHub Copilot CLI works out of the box.
 
@@ -49,6 +51,13 @@ The VM template disables Lima's bundled containerd setup and uses Ubuntu so the 
 
 - Host path: `~/.ai-box/<instance-name>/.copilot`
 - Guest path: `/home/<vm-user>.guest/.copilot`
+
+## Claude Code shared state
+
+- Host path: `~/.ai-box/<instance-name>/.claude`
+- Guest path: `/home/<vm-user>.guest/.claude`
+- Holds Claude Code settings and, on Linux, the `.credentials.json` login, so auth/config persists across VM recreations.
+- `CLAUDE_CONFIG_DIR` is set to this directory in the VM, so the global config file lands at `~/.claude/.claude.json` (inside the mount) instead of the default `~/.claude.json` (outside it) — that state persists too.
 
 ## Port forwarding
 

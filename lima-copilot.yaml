@@ -10,9 +10,10 @@ containerd:
   user: false
 
 portForwards:
-#  - guestPortRange: [1024, 65535]
-#    hostPortRange: [1024, 65535]
-   - ignore: true
+  # Automatic port forwarding rules below are commented out in favor of vscode port forwarding
+  #  - guestPortRange: [1024, 65535]
+  #    hostPortRange: [1024, 65535]
+  - ignore: true
 
 provision:
   - mode: system
@@ -22,6 +23,22 @@ provision:
       export DEBIAN_FRONTEND=noninteractive
       apt-get update
       apt-get install -y ca-certificates curl git openssh-client sudo
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -euxo pipefail
+      # Install Docker Engine via Docker's official convenience script
+      # (sets up the repo, installs the engine + CLI + compose, enables the service)
+      curl -fsSL https://get.docker.com | sh
+  - mode: user
+    script: |
+      #!/bin/bash
+      set -euxo pipefail
+      # Add the Lima user to the docker group so docker works without sudo.
+      # Kept separate from the Docker install step above: that step runs as root and
+      # is user-agnostic, while group membership is specific to this VM's login user
+      # ($USER is only meaningful in a user-mode script). Applies to new shells.
+      sudo usermod -aG docker "$USER"
   - mode: user
     script: |
       #!/bin/bash
@@ -32,6 +49,10 @@ provision:
       \. "$NVM_DIR/nvm.sh"
       nvm install 24
       npm install -g --include=optional @github/copilot
+      # Install Claude Code via the official installer
+      curl -fsSL https://claude.ai/install.sh | bash
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+      echo 'export CLAUDE_CONFIG_DIR="$HOME/.claude"' >> ~/.bashrc
 
 ssh:
   forwardAgent: true
