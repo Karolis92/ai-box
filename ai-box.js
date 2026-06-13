@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 
+const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
 const DEFAULT_NAME = "ai-box";
 const TEMPLATE_PATH = path.join(__dirname, "lima-copilot.yaml");
+const WORKSPACE_MOUNT_POINT = "/home/{{.User}}.guest/workspace";
+const COPILOT_MOUNT_POINT = "/home/{{.User}}.guest/.copilot";
 
 function usage() {
   process.stdout.write(`Usage: node ai-box.js [name]
 
-Starts the Lima box for the current directory.
+Starts the Lima box for the current directory, mounted at ${WORKSPACE_MOUNT_POINT}.
 Default name: ${DEFAULT_NAME}
 `);
 }
@@ -53,10 +57,46 @@ function vmRunning(name) {
     .startsWith("Running");
 }
 
+function workspacePath() {
+  return path.resolve(process.cwd());
+}
+
+function copilotStatePath(name) {
+  return path.join(os.homedir(), ".ai-box", name, ".copilot");
+}
+
+function ensureCopilotStatePath(name) {
+  fs.mkdirSync(copilotStatePath(name), { recursive: true });
+}
+
+function buildMountsExpression(name) {
+  return `.mounts = ${JSON.stringify([
+    {
+      location: workspacePath(),
+      mountPoint: WORKSPACE_MOUNT_POINT,
+      writable: true,
+    },
+    {
+      location: copilotStatePath(name),
+      mountPoint: COPILOT_MOUNT_POINT,
+      writable: true,
+    },
+  ])}`;
+}
+
 function createVm(name) {
+  ensureCopilotStatePath(name);
+
   run(
     "limactl",
-    ["create", "--yes", `--name=${name}`, `--mount=.:w`, TEMPLATE_PATH],
+    [
+      "create",
+      "--yes",
+      `--name=${name}`,
+      "--mount-none",
+      `--set=${buildMountsExpression(name)}`,
+      TEMPLATE_PATH,
+    ],
     {
       stdio: "inherit",
     },
@@ -96,7 +136,10 @@ function main() {
     process.stdout.write(`[ai-box] VM already running: ${name}\n`);
   }
 
-  process.stdout.write(`[ai-box] Shell: limactl shell ${name}\n`);
+  process.stdout.write(`[ai-box] Workspace: ${WORKSPACE_MOUNT_POINT}\n`);
+  process.stdout.write(
+    `[ai-box] Shell: limactl shell --workdir ${WORKSPACE_MOUNT_POINT} ${name}\n`,
+  );
 }
 
 main();
