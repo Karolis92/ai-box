@@ -109,6 +109,7 @@ function createVm(name) {
       "--yes",
       `--name=${name}`,
       "--mount-none",
+      "--rosetta",
       `--set=${buildMountsExpression(name)}`,
       TEMPLATE_PATH,
     ],
@@ -119,7 +120,7 @@ function createVm(name) {
 }
 
 function startVm(name) {
-  run("limactl", ["start", name], { stdio: "inherit" });
+  run("limactl", ["start", name, "--rosetta"], { stdio: "inherit" });
 }
 
 function main() {
